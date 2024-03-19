@@ -37,7 +37,7 @@ public class SimpleConsumer {
                 logger.info("{}", record);
                 currentOffset.put(
                         new TopicPartition(record.topic(), record.partition()),
-                        new OffsetAndMetadata(record.offset() + 1, null)
+                        new OffsetAndMetadata(record.offset() + 1, null) // 현재 오프셋에 1을 더한 값으로 커밋해야한다. poll()메서드는 마지막으로 커밋된 오프셋부터 레코드를 리턴하기 때문이다.
                 );
                 consumer.commitSync(currentOffset);
             }
