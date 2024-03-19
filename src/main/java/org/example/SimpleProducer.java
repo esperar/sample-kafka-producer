@@ -24,7 +24,7 @@ public class SimpleProducer {
         KafkaProducer<String, String> producer = new KafkaProducer<>(configs);
 
         String messageValue = "testMessage";
-        ProducerRecord<String, String> record = new ProducerRecord<>(TOPIC_NAME, messageValue);
+        ProducerRecord<String, String> record = new ProducerRecord<>(TOPIC_NAME, messageValue, "messageKey");
         producer.send(record);
         logger.info("{}", record);
         producer.flush();
