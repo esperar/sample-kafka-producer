@@ -28,7 +28,7 @@ public class SimpleProducer {
 
         String messageValue = "testMessage";
         ProducerRecord<String, String> record = new ProducerRecord<>(TOPIC_NAME, partitionNo, "messageKey", messageValue);
-        producer.send(record);
+        producer.send(record, new ProducerCallback());
         logger.info("{}", record);
         producer.flush();
         producer.close();
