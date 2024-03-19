@@ -23,8 +23,10 @@ public class SimpleProducer {
 
         KafkaProducer<String, String> producer = new KafkaProducer<>(configs);
 
+        int partitionNo = 1;
+
         String messageValue = "testMessage";
-        ProducerRecord<String, String> record = new ProducerRecord<>(TOPIC_NAME, messageValue, "messageKey", "messageValue");
+        ProducerRecord<String, String> record = new ProducerRecord<>(TOPIC_NAME, partitionNo, "messageKey", messageValue);
         producer.send(record);
         logger.info("{}", record);
         producer.flush();
