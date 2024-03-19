@@ -2,6 +2,7 @@ package org.example;
 
 import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.errors.WakeupException;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,23 +31,36 @@ public class SimpleConsumer {
         consumer = new KafkaConsumer<>(configs);
         consumer.subscribe(Arrays.asList(TOPIC_NAME), new RebalanceListener());
 
-        while (true) {
-            ConsumerRecords<String, String> records = consumer.poll(Duration.ofSeconds(1));
-            currentOffset = new HashMap<>();
-            for (ConsumerRecord<String, String> record : records) {
-                logger.info("{}", record);
-                currentOffset.put(
-                        new TopicPartition(record.topic(), record.partition()),
-                        new OffsetAndMetadata(record.offset() + 1, null) // 현재 오프셋에 1을 더한 값으로 커밋해야한다. poll()메서드는 마지막으로 커밋된 오프셋부터 레코드를 리턴하기 때문이다.
-                );
-                consumer.commitSync(currentOffset);
+        try {
+            while (true) {
+                ConsumerRecords<String, String> records = consumer.poll(Duration.ofSeconds(1));
+                currentOffset = new HashMap<>();
+                for (ConsumerRecord<String, String> record : records) {
+                    logger.info("{}", record);
+                    currentOffset.put(
+                            new TopicPartition(record.topic(), record.partition()),
+                            new OffsetAndMetadata(record.offset() + 1, null) // 현재 오프셋에 1을 더한 값으로 커밋해야한다. poll()메서드는 마지막으로 커밋된 오프셋부터 레코드를 리턴하기 때문이다.
+                    );
+                    consumer.commitSync(currentOffset);
+                }
             }
+        } catch (WakeupException e) {
+            logger.warn("Wake up consumer");
+        } finally {
+            consumer.close();
+            Runtime.getRuntime().addShutdownHook(new ShutdownThread()); // 셧다운훅 발생
         }
 
     }
 
-    private static class RebalanceListener implements ConsumerRebalanceListener {
+    static class ShutdownThread extends Thread {
+        public void run() {
+            logger.info("Shutdown hook");
+            consumer.wakeup();
+        }
+    }
 
+    private static class RebalanceListener implements ConsumerRebalanceListener {
         @Override
         public void onPartitionsRevoked(Collection<TopicPartition> partitions) {
             logger.warn("Partitions are assigned");
