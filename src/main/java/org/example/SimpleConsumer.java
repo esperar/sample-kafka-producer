@@ -7,10 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 public class SimpleConsumer {
 
@@ -18,6 +15,9 @@ public class SimpleConsumer {
     private final static String TOPIC_NAME = "test";
     private final static String BOOTSTRAP_SERVERS = "my-kafka:9092";
     private final static String GROUP_ID = "test-group";
+
+    private static KafkaConsumer<String, String> consumer;
+    private static Map<TopicPartition, OffsetAndMetadata> currentOffset;
 
     public static void main(String[] args) {
         Properties configs = new Properties();
@@ -27,12 +27,12 @@ public class SimpleConsumer {
         configs.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         configs.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
 
-        KafkaConsumer<String, String> consumer = new KafkaConsumer<>(configs);
-        consumer.subscribe(Arrays.asList(TOPIC_NAME));
+        consumer = new KafkaConsumer<>(configs);
+        consumer.subscribe(Arrays.asList(TOPIC_NAME), new RebalanceListener());
 
         while (true) {
             ConsumerRecords<String, String> records = consumer.poll(Duration.ofSeconds(1));
-            Map<TopicPartition, OffsetAndMetadata> currentOffset = new HashMap<>();
+            currentOffset = new HashMap<>();
             for (ConsumerRecord<String, String> record : records) {
                 logger.info("{}", record);
                 currentOffset.put(
@@ -41,6 +41,21 @@ public class SimpleConsumer {
                 );
                 consumer.commitSync(currentOffset);
             }
+        }
+
+    }
+
+    private static class RebalanceListener implements ConsumerRebalanceListener {
+
+        @Override
+        public void onPartitionsRevoked(Collection<TopicPartition> partitions) {
+            logger.warn("Partitions are assigned");
+        }
+
+        @Override
+        public void onPartitionsAssigned(Collection<TopicPartition> partitions) {
+            logger.warn("Partitions are assigned");
+            consumer.commitSync(currentOffset);
         }
     }
 }
